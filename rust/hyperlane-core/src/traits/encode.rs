@@ -151,6 +151,28 @@ impl Decode for u64 {
     }
 }
 
+impl Encode for u128 {
+    fn write_to<W>(&self, writer: &mut W) -> std::io::Result<usize>
+    where
+        W: std::io::Write,
+    {
+        writer.write_all(&self.to_be_bytes())?;
+        Ok(16)
+    }
+}
+
+impl Decode for u128 {
+    fn read_from<R>(reader: &mut R) -> Result<Self, HyperlaneProtocolError>
+    where
+        R: std::io::Read,
+        Self: Sized,
+    {
+        let mut buf = [0; 16];
+        reader.read_exact(&mut buf)?;
+        Ok(u128::from_be_bytes(buf))
+    }
+}
+
 impl Encode for bool {
     fn write_to<W>(&self, writer: &mut W) -> std::io::Result<usize>
     where

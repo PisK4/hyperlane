@@ -1,12 +1,13 @@
 use ethers::prelude::Selector;
 use h_cosmos::CosmosProvider;
+use h_eth::EthereumERC20TYTAbi;
 use std::collections::HashMap;
 
 use eyre::{eyre, Context, Result};
 
 use ethers_prometheus::middleware::{ChainInfo, ContractInfo, PrometheusMiddlewareConf};
 use hyperlane_core::{
-    AggregationIsm, CcipReadIsm, ContractLocator, HyperlaneAbi, HyperlaneDomain,
+    AggregationIsm, CcipReadIsm, ContractLocator, Erc20Tyt, HyperlaneAbi, HyperlaneDomain,
     HyperlaneDomainProtocol, HyperlaneMessage, HyperlaneProvider, IndexMode,
     InterchainGasPaymaster, InterchainGasPayment, InterchainSecurityModule, Mailbox,
     MerkleTreeHook, MerkleTreeInsertion, MultisigIsm, RoutingIsm, SequenceAwareIndexer,
@@ -86,6 +87,8 @@ pub struct CoreContractAddresses {
     pub validator_announce: H256,
     /// Address of the MerkleTreeHook contract
     pub merkle_tree_hook: H256,
+
+    pub erc20tyt: H256,
 }
 
 /// Indexing settings
@@ -234,6 +237,32 @@ impl ChainConf {
                 )?);
                 Ok(indexer as Box<dyn SequenceAwareIndexer<HyperlaneMessage>>)
             }
+        }
+        .context(ctx)
+    }
+
+    pub async fn build_erc20tyt_indexer(
+        &self,
+        metrics: &CoreMetrics,
+    ) -> Result<Box<dyn SequenceAwareIndexer<Erc20Tyt>>> {
+        let ctx: &str = "Building erc20tyt indexer";
+        let locator = self.locator(self.addresses.erc20tyt);
+
+        match &self.connection {
+            ChainConnectionConf::Ethereum(conf) => {
+                self.build_ethereum(
+                    conf,
+                    &locator,
+                    metrics,
+                    h_eth::Erc20TytBuilder {
+                        reorg_period: self.reorg_period,
+                    },
+                )
+                .await
+            }
+            ChainConnectionConf::Fuel(_) => todo!(),
+            ChainConnectionConf::Sealevel(_) => todo!(),
+            ChainConnectionConf::Cosmos(_) => todo!(),
         }
         .context(ctx)
     }
@@ -698,6 +727,11 @@ impl ChainConf {
             "merkle_tree_hook",
             self.addresses.merkle_tree_hook,
             EthereumInterchainGasPaymasterAbi::fn_map_owned(),
+        );
+        register_contract(
+            "erc20tyt",
+            self.addresses.erc20tyt,
+            EthereumERC20TYTAbi::fn_map_owned(),
         );
 
         cfg

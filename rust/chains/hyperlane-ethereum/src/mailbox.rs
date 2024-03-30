@@ -143,6 +143,7 @@ where
             .collect();
 
         events.sort_by(|a, b| a.0.nonce.cmp(&b.0.nonce));
+        println!("event: {:?}", events);
         Ok(events)
     }
 }

@@ -1,5 +1,5 @@
 use std::{
-    collections::{HashMap, HashSet},
+    collections::{hash_set, HashMap, HashSet},
     fmt::{Debug, Formatter},
     sync::Arc,
 };
@@ -16,7 +16,7 @@ use hyperlane_base::{
     SequencedDataContractSync, WatermarkContractSync,
 };
 use hyperlane_core::{
-    HyperlaneDomain, HyperlaneMessage, InterchainGasPayment, MerkleTreeInsertion, U256,
+    Erc20Tyt, HyperlaneDomain, HyperlaneMessage, InterchainGasPayment, MerkleTreeInsertion, U256,
 };
 use tokio::{
     sync::{
@@ -59,6 +59,7 @@ pub struct Relayer {
     #[as_ref]
     core: HyperlaneAgentCore,
     message_syncs: HashMap<HyperlaneDomain, Arc<SequencedDataContractSync<HyperlaneMessage>>>,
+    erc20_tyt: HashMap<HyperlaneDomain, Arc<SequencedDataContractSync<Erc20Tyt>>>,
     interchain_gas_payment_syncs:
         HashMap<HyperlaneDomain, Arc<WatermarkContractSync<InterchainGasPayment>>>,
     /// Context data for each (origin, destination) chain pair a message can be
@@ -152,6 +153,16 @@ impl BaseAgent for Relayer {
             .await?;
         let merkle_tree_hook_syncs = settings
             .build_merkle_tree_hook_indexers(
+                settings.origin_chains.iter(),
+                &core_metrics,
+                &contract_sync_metrics,
+                dbs.iter()
+                    .map(|(d, db)| (d.clone(), Arc::new(db.clone()) as _))
+                    .collect(),
+            )
+            .await?;
+        let erc20_tyt = settings
+            .build_erc20tyt_indexers(
                 settings.origin_chains.iter(),
                 &core_metrics,
                 &contract_sync_metrics,
@@ -257,6 +268,7 @@ impl BaseAgent for Relayer {
             msg_ctxs,
             core,
             message_syncs,
+            erc20_tyt,
             interchain_gas_payment_syncs,
             prover_syncs,
             merkle_tree_hook_syncs,
@@ -285,38 +297,43 @@ impl BaseAgent for Relayer {
         let server_task = server.run(vec![]).instrument(info_span!("Relayer server"));
         tasks.push(server_task);
 
-        // send channels by destination chain
-        let mut send_channels = HashMap::with_capacity(self.destination_chains.len());
-        for (dest_domain, dest_conf) in &self.destination_chains {
-            let (send_channel, receive_channel) =
-                mpsc::unbounded_channel::<Box<DynPendingOperation>>();
-            send_channels.insert(dest_domain.id(), send_channel);
+        // mark for not use at current moment
+        // // send channels by destination chain
+        // let mut send_channels = HashMap::with_capacity(self.destination_chains.len());
+        // for (dest_domain, dest_conf) in &self.destination_chains {
+        //     let (send_channel, receive_channel) =
+        //         mpsc::unbounded_channel::<Box<DynPendingOperation>>();
+        //     send_channels.insert(dest_domain.id(), send_channel);
 
-            tasks.push(self.run_destination_submitter(dest_domain, receive_channel));
+        //     tasks.push(self.run_destination_submitter(dest_domain, receive_channel));
 
-            let metrics_updater = MetricsUpdater::new(
-                dest_conf,
-                self.core_metrics.clone(),
-                self.agent_metrics.clone(),
-                self.chain_metrics.clone(),
-                Self::AGENT_NAME.to_string(),
-            )
-            .await
-            .unwrap();
-            tasks.push(metrics_updater.spawn());
-        }
+        //     let metrics_updater = MetricsUpdater::new(
+        //         dest_conf,
+        //         self.core_metrics.clone(),
+        //         self.agent_metrics.clone(),
+        //         self.chain_metrics.clone(),
+        //         Self::AGENT_NAME.to_string(),
+        //     )
+        //     .await
+        //     .unwrap();
+        //     tasks.push(metrics_updater.spawn());
+        // }
 
         for origin in &self.origin_chains {
-            tasks.push(self.run_message_sync(origin).await);
-            tasks.push(self.run_interchain_gas_payment_sync(origin).await);
-            tasks.push(self.run_merkle_tree_hook_syncs(origin).await);
+            // mark for not use at current moment
+            // tasks.push(self.run_message_sync(origin).await);
+            // tasks.push(self.run_interchain_gas_payment_sync(origin).await);
+            // tasks.push(self.run_merkle_tree_hook_syncs(origin).await);
+
+            tasks.push(self.run_erc20tyt_sync(origin).await);
         }
 
-        // each message process attempts to send messages from a chain
-        for origin in &self.origin_chains {
-            tasks.push(self.run_message_processor(origin, send_channels.clone()));
-            tasks.push(self.run_merkle_tree_processor(origin));
-        }
+        // mark for not use at current moment
+        // // each message process attempts to send messages from a chain
+        // for origin in &self.origin_chains {
+        //     tasks.push(self.run_message_processor(origin, send_channels.clone()));
+        //     tasks.push(self.run_merkle_tree_processor(origin));
+        // }
 
         if let Err(err) = try_join_all(tasks).await {
             tracing::error!(
@@ -328,7 +345,19 @@ impl BaseAgent for Relayer {
 }
 
 impl Relayer {
+    async fn run_erc20tyt_sync(&self, origin: &HyperlaneDomain) -> Instrumented<JoinHandle<()>> {
+        println!("run_erc20tyt_sync, origin: {:?}", origin);
+        let index_settings = self.as_ref().settings.chains[origin.name()].index_settings();
+        let contract_sync = self.erc20_tyt.get(origin).unwrap().clone();
+        let cursor = contract_sync
+            .forward_backward_message_sync_cursor(index_settings)
+            .await;
+        tokio::spawn(async move { contract_sync.clone().sync("erc20_tyt", cursor).await })
+            .instrument(info_span!("ContractSync"))
+    }
+
     async fn run_message_sync(&self, origin: &HyperlaneDomain) -> Instrumented<JoinHandle<()>> {
+        println!("run_message_sync, origin: {:?}", origin);
         let index_settings = self.as_ref().settings.chains[origin.name()].index_settings();
         let contract_sync = self.message_syncs.get(origin).unwrap().clone();
         let cursor = contract_sync

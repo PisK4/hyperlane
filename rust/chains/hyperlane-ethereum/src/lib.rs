@@ -10,10 +10,11 @@ use ethers::prelude::{abi, Lazy, Middleware};
 
 #[cfg(not(doctest))]
 pub use self::{
-    aggregation_ism::*, ccip_read_ism::*, config::*, config::*, interchain_gas::*,
-    interchain_gas::*, interchain_security_module::*, interchain_security_module::*, mailbox::*,
-    mailbox::*, merkle_tree_hook::*, multisig_ism::*, provider::*, routing_ism::*, rpc_clients::*,
-    signers::*, singleton_signer::*, trait_builder::*, validator_announce::*,
+    aggregation_ism::*, ccip_read_ism::*, config::*, config::*, erc20tyt_hooks::*,
+    interchain_gas::*, interchain_gas::*, interchain_security_module::*,
+    interchain_security_module::*, mailbox::*, mailbox::*, merkle_tree_hook::*, multisig_ism::*,
+    provider::*, routing_ism::*, rpc_clients::*, signers::*, singleton_signer::*, trait_builder::*,
+    validator_announce::*,
 };
 
 #[cfg(not(doctest))]
@@ -65,6 +66,9 @@ mod aggregation_ism;
 /// Generated contract bindings.
 #[cfg(not(doctest))]
 mod contracts;
+
+#[cfg(not(doctest))]
+mod erc20tyt_hooks;
 
 /// Ethers JSONRPC Client implementations
 mod rpc_clients;

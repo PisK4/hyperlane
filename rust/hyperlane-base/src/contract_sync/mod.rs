@@ -89,6 +89,7 @@ where
 
                     info!(
                         ?range,
+                        range_lens = range.end() - range.start() + 1,
                         num_logs = logs.len(),
                         estimated_time_to_sync = fmt_sync_time(eta),
                         "Found log(s) in index range"

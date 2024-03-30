@@ -4,7 +4,7 @@ use paste::paste;
 use tracing::{debug, instrument, trace};
 
 use hyperlane_core::{
-    GasPaymentKey, HyperlaneDomain, HyperlaneLogStore, HyperlaneMessage,
+    Erc20Tyt, GasPaymentKey, HyperlaneDomain, HyperlaneLogStore, HyperlaneMessage,
     HyperlaneSequenceAwareIndexerStoreReader, HyperlaneWatermarkedLogStore,
     InterchainGasExpenditure, InterchainGasPayment, InterchainGasPaymentMeta, LogMeta,
     MerkleTreeInsertion, H256,
@@ -15,8 +15,13 @@ use super::{
     DbError, TypedDB, DB,
 };
 
+use hyperlane_core::U256;
+
 // these keys MUST not be given multiple uses in case multiple agents are
 // started with the same database and domain.
+
+const TRANSFER_ID: &str = "transfer_id_";
+const TRANSFER: &str = "transfer_";
 
 const MESSAGE_ID: &str = "message_id_";
 const MESSAGE_DISPATCHED_BLOCK_NUMBER: &str = "message_dispatched_block_number_";
@@ -104,6 +109,34 @@ impl HyperlaneRocksDB {
         match id {
             None => Ok(None),
             Some(id) => self.retrieve_message_by_id(&id),
+        }
+    }
+
+    pub fn storage_erc20_transfer(
+        &self,
+        erc20_transfer: &Erc20Tyt,
+        meta: &LogMeta,
+    ) -> DbResult<bool> {
+        if let Ok(Some(_)) = self.retrieve_transfer_by_id(&meta.log_index) {
+            trace!(msg=?erc20_transfer, "Message already stored in db");
+            return Ok(false);
+        }
+
+        let id = meta.log_index;
+        debug!(msg=?erc20_transfer,  "Storing new message in db",);
+
+        self.store_transfer_by_id(&id, erc20_transfer)?;
+
+        self.store_transfer_id_by_nonce(&erc20_transfer.tx_timestamp(), &id)?;
+
+        Ok(true)
+    }
+
+    pub fn retrieve_transfer_by_sequence_id(&self, id: u32) -> DbResult<Option<Erc20Tyt>> {
+        let id = self.retrieve_transfer_id_by_nonce(&id)?;
+        match id {
+            None => Ok(None),
+            Some(id) => self.retrieve_transfer_by_id(&id),
         }
     }
 
@@ -249,6 +282,25 @@ impl HyperlaneLogStore<HyperlaneMessage> for HyperlaneRocksDB {
 }
 
 #[async_trait]
+impl HyperlaneLogStore<Erc20Tyt> for HyperlaneRocksDB {
+    /// Store a list of dispatched messages and their associated metadata.
+    #[instrument(skip_all)]
+    async fn store_logs(&self, messages: &[(Erc20Tyt, LogMeta)]) -> Result<u32> {
+        let mut stored = 0;
+        for (message, meta) in messages {
+            let stored_message = self.storage_erc20_transfer(message, meta)?;
+            if stored_message {
+                stored += 1;
+            }
+        }
+        if stored > 0 {
+            debug!(messages = stored, "Wrote new messages to database");
+        }
+        Ok(stored)
+    }
+}
+
+#[async_trait]
 impl HyperlaneLogStore<InterchainGasPayment> for HyperlaneRocksDB {
     /// Store a list of interchain gas payments and their associated metadata.
     #[instrument(skip_all)]
@@ -293,6 +345,18 @@ impl HyperlaneSequenceAwareIndexerStoreReader<HyperlaneMessage> for HyperlaneRoc
     async fn retrieve_log_block_number_by_sequence(&self, sequence: u32) -> Result<Option<u64>> {
         let number = self.retrieve_dispatched_block_number_by_nonce(&sequence)?;
         Ok(number)
+    }
+}
+
+#[async_trait]
+impl HyperlaneSequenceAwareIndexerStoreReader<Erc20Tyt> for HyperlaneRocksDB {
+    async fn retrieve_by_sequence(&self, sequence: u32) -> Result<Option<Erc20Tyt>> {
+        let transfer = self.retrieve_transfer_by_sequence_id(sequence)?;
+        Ok(transfer)
+    }
+
+    async fn retrieve_log_block_number_by_sequence(&self, sequence: u32) -> Result<Option<u64>> {
+        Ok(None)
     }
 }
 
@@ -355,6 +419,9 @@ macro_rules! make_store_and_retrieve {
         }
     };
 }
+
+make_store_and_retrieve!(pub, transfer_id_by_nonce, TRANSFER_ID, u32, U256);
+make_store_and_retrieve!(pub(self), transfer_by_id, TRANSFER, U256, Erc20Tyt);
 
 make_store_and_retrieve!(pub, message_id_by_nonce, MESSAGE_ID, u32, H256);
 make_store_and_retrieve!(pub(self), message_by_id, MESSAGE, H256, HyperlaneMessage);
