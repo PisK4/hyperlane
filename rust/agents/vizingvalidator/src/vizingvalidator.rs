@@ -321,7 +321,7 @@ impl BaseAgent for Relayer {
         }
 
         for origin in &self.origin_chains {
-            tasks.push(self.run_message_sync(origin).await);
+            // tasks.push(self.run_message_sync(origin).await);
             tasks.push(self.run_vizing_message_sync(origin).await);
             // tasks.push(self.run_interchain_gas_payment_sync(origin).await);
             // tasks.push(self.run_merkle_tree_hook_syncs(origin).await);
