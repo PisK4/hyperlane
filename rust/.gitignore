@@ -3,4 +3,5 @@ validatordb
 relayerdb
 kathydb
 hyperlane_db
+vizing_db_validator
 config/test_config.json

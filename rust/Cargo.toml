@@ -1,8 +1,6 @@
 [workspace]
 members = [
-  "agents/relayer",
-  "agents/scraper",
-  "agents/validator",
+  "agents/vizingvalidator",
   "chains/hyperlane-cosmos",
   "chains/hyperlane-ethereum",
   "chains/hyperlane-fuel",
