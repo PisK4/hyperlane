@@ -186,6 +186,11 @@ fn parse_chain(
         .get_key("merkleTreeHook")
         .parse_address_hash()
         .end();
+    let vizing_message_station = chain
+        .chain(&mut err)
+        .get_key("vizingMessageStation")
+        .parse_address_hash()
+        .end();
 
     cfg_unwrap_all!(&chain.cwp, err: [domain]);
     let connection = build_connection_conf(
@@ -196,7 +201,7 @@ fn parse_chain(
         default_rpc_consensus_type,
     );
 
-    cfg_unwrap_all!(&chain.cwp, err: [connection, mailbox, interchain_gas_paymaster, validator_announce, merkle_tree_hook]);
+    cfg_unwrap_all!(&chain.cwp, err: [connection, mailbox, interchain_gas_paymaster, validator_announce, merkle_tree_hook, vizing_message_station]);
     err.into_result(ChainConf {
         domain,
         signer,
@@ -206,6 +211,7 @@ fn parse_chain(
             interchain_gas_paymaster,
             validator_announce,
             merkle_tree_hook,
+            vizing_message_station,
         },
         connection,
         metrics_conf: Default::default(),

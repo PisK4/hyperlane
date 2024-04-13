@@ -1,17 +1,17 @@
+use ethers_core::utils::keccak256;
 use serde::de::value;
 use sha3::{digest::Update, Digest, Keccak256};
 use std::fmt::{Debug, Display, Formatter};
 
 use crate::utils::fmt_domain;
-use crate::{Decode, Encode, HyperlaneProtocolError, Sequenced, H160, U256};
+use crate::{Decode, Encode, HyperlaneProtocolError, Sequenced, H160, H256, U256};
 
 pub type RawVizingMessage = Vec<u8>;
 
+#[derive(Clone, Eq, PartialEq, Hash)]
 pub struct VizingMessage {
     /// 4   user nonce
     pub nonce: u32,
-    /// 4   Destination domain ID
-    pub destination: u32,
     /// 8  Earliest arrival timestamp
     pub earlistarrivaltimestamp: u64,
     /// 8  Latest arrival timestamp
@@ -22,6 +22,8 @@ pub struct VizingMessage {
     pub sender: H160,
     /// 32  Value from the sender
     pub value: U256,
+    /// 4   Destination domain ID
+    pub destination: u32,
     /// 0+  Additional parameters
     pub aditionparams: Vec<u8>,
     /// 0+  Message contents
@@ -108,15 +110,15 @@ impl Encode for VizingMessage {
         let mut value_bytes = [0u8; 32];
         self.value.to_big_endian(&mut value_bytes);
         writer.write_all(&self.nonce.to_be_bytes())?;
-        writer.write_all(&self.destination.to_be_bytes())?;
         writer.write_all(&self.earlistarrivaltimestamp.to_be_bytes())?;
         writer.write_all(&self.latestarrivaltimestamp.to_be_bytes())?;
         writer.write_all(self.relayer.as_fixed_bytes())?;
         writer.write_all(self.sender.as_fixed_bytes())?;
         writer.write_all(value_bytes.as_ref())?;
+        writer.write_all(&self.destination.to_be_bytes())?;
         writer.write_all(&self.aditionparams)?;
         writer.write_all(&self.message)?;
-        Ok(4 + 4 + 8 + 8 + 20 + 20 + 32 + self.aditionparams.len() + self.message.len())
+        Ok(4 + 8 + 8 + 20 + 20 + 32 + 4 + self.aditionparams.len() + self.message.len())
     }
 }
 
@@ -127,9 +129,6 @@ impl Decode for VizingMessage {
     {
         let mut nonce = [0u8; 4];
         reader.read_exact(&mut nonce)?;
-
-        let mut destination = [0u8; 4];
-        reader.read_exact(&mut destination)?;
 
         let mut earlistarrivaltimestamp = [0u8; 8];
         reader.read_exact(&mut earlistarrivaltimestamp)?;
@@ -146,6 +145,9 @@ impl Decode for VizingMessage {
         let mut value_bytes = [0u8; 32];
         reader.read_exact(&mut value_bytes)?;
         let value = U256::from_big_endian(&value_bytes);
+
+        let mut destination = [0u8; 4];
+        reader.read_exact(&mut destination)?;
 
         let mut aditionparams = vec![];
         reader.read_to_end(&mut aditionparams)?;
@@ -167,18 +169,12 @@ impl Decode for VizingMessage {
     }
 }
 
-// impl VizingMessage {
-//     pub fn id(&self) -> U256 {
-//         let mut hasher = Keccak256::new();
-//         hasher.input(self.nonce.to_be_bytes().as_ref());
-//         hasher.input(self.origin.to_be_bytes().as_ref());
-//         hasher.input(self.destination.to_be_bytes().as_ref());
-//         hasher.input(self.earlistarrivaltimestamp.to_be_bytes().as_ref());
-//         hasher.input(self.latestarrivaltimestamp.to_be_bytes().as_ref());
-//         hasher.input(self.relayer.as_ref());
-//         hasher.input(self.sender.as_ref());
-//         hasher.input(&self.aditionparams);
-//         hasher.input(&self.message);
-//         U256::from_big_endian(hasher.result().as_slice())
-//     }
-// }
+impl VizingMessage {
+    pub fn id(&self) -> H256 {
+        // ethers encode & keccak256
+        let mut encoded = Vec::new();
+        self.write_to(&mut encoded).unwrap();
+        let hash = keccak256(&encoded);
+        hash.into()
+    }
+}

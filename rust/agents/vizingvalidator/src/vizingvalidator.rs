@@ -16,7 +16,8 @@ use hyperlane_base::{
     SequencedDataContractSync, WatermarkContractSync,
 };
 use hyperlane_core::{
-    HyperlaneDomain, HyperlaneMessage, InterchainGasPayment, MerkleTreeInsertion, U256,
+    HyperlaneDomain, HyperlaneMessage, InterchainGasPayment, MerkleTreeInsertion, VizingMessage,
+    U256,
 };
 use tokio::{
     sync::{
@@ -58,6 +59,7 @@ pub struct Relayer {
     destination_chains: HashMap<HyperlaneDomain, ChainConf>,
     #[as_ref]
     core: HyperlaneAgentCore,
+    vizing_message_syncs: HashMap<HyperlaneDomain, Arc<SequencedDataContractSync<VizingMessage>>>,
     message_syncs: HashMap<HyperlaneDomain, Arc<SequencedDataContractSync<HyperlaneMessage>>>,
     interchain_gas_payment_syncs:
         HashMap<HyperlaneDomain, Arc<WatermarkContractSync<InterchainGasPayment>>>,
@@ -129,6 +131,17 @@ impl BaseAgent for Relayer {
             .await?;
 
         let contract_sync_metrics = Arc::new(ContractSyncMetrics::new(&core_metrics));
+
+        let vizing_message_syncs = settings
+            .build_vizing_launch_message_indexers(
+                settings.origin_chains.iter(),
+                &core_metrics,
+                &contract_sync_metrics,
+                dbs.iter()
+                    .map(|(d, db)| (d.clone(), Arc::new(db.clone()) as _))
+                    .collect(),
+            )
+            .await?;
 
         let message_syncs = settings
             .build_message_indexers(
@@ -256,6 +269,7 @@ impl BaseAgent for Relayer {
             destination_chains,
             msg_ctxs,
             core,
+            vizing_message_syncs,
             message_syncs,
             interchain_gas_payment_syncs,
             prover_syncs,
@@ -308,14 +322,15 @@ impl BaseAgent for Relayer {
 
         for origin in &self.origin_chains {
             tasks.push(self.run_message_sync(origin).await);
-            tasks.push(self.run_interchain_gas_payment_sync(origin).await);
-            tasks.push(self.run_merkle_tree_hook_syncs(origin).await);
+            tasks.push(self.run_vizing_message_sync(origin).await);
+            // tasks.push(self.run_interchain_gas_payment_sync(origin).await);
+            // tasks.push(self.run_merkle_tree_hook_syncs(origin).await);
         }
 
         // each message process attempts to send messages from a chain
         for origin in &self.origin_chains {
-            tasks.push(self.run_message_processor(origin, send_channels.clone()));
-            tasks.push(self.run_merkle_tree_processor(origin));
+            // tasks.push(self.run_message_processor(origin, send_channels.clone()));
+            // tasks.push(self.run_merkle_tree_processor(origin));
         }
 
         if let Err(err) = try_join_all(tasks).await {
@@ -328,6 +343,24 @@ impl BaseAgent for Relayer {
 }
 
 impl Relayer {
+    async fn run_vizing_message_sync(
+        &self,
+        origin: &HyperlaneDomain,
+    ) -> Instrumented<JoinHandle<()>> {
+        let index_settings = self.as_ref().settings.chains[origin.name()].index_settings();
+        let contract_sync = self.vizing_message_syncs.get(origin).unwrap().clone();
+        let cursor = contract_sync
+            .forward_backward_message_sync_cursor(index_settings)
+            .await;
+        tokio::spawn(async move {
+            contract_sync
+                .clone()
+                .sync("vizing_launch_message", cursor)
+                .await
+        })
+        .instrument(info_span!("ContractSync"))
+    }
+
     async fn run_message_sync(&self, origin: &HyperlaneDomain) -> Instrumented<JoinHandle<()>> {
         let index_settings = self.as_ref().settings.chains[origin.name()].index_settings();
         let contract_sync = self.message_syncs.get(origin).unwrap().clone();

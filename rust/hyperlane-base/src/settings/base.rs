@@ -6,7 +6,7 @@ use hyperlane_core::{
     Delivery, HyperlaneChain, HyperlaneDomain, HyperlaneMessage, HyperlaneProvider,
     HyperlaneSequenceAwareIndexerStore, HyperlaneWatermarkedLogStore, InterchainGasPaymaster,
     InterchainGasPayment, Mailbox, MerkleTreeHook, MerkleTreeInsertion, MultisigIsm,
-    ValidatorAnnounce, H256,
+    ValidatorAnnounce, VizingMessage, H256,
 };
 
 use crate::{
@@ -192,4 +192,5 @@ impl Settings {
     build_indexer_fns!(build_message_indexer, build_message_indexers -> dyn HyperlaneSequenceAwareIndexerStore<HyperlaneMessage>, SequencedDataContractSync<HyperlaneMessage>);
     build_indexer_fns!(build_interchain_gas_payment_indexer, build_interchain_gas_payment_indexers -> dyn HyperlaneWatermarkedLogStore<InterchainGasPayment>, WatermarkContractSync<InterchainGasPayment>);
     build_indexer_fns!(build_merkle_tree_hook_indexer, build_merkle_tree_hook_indexers -> dyn HyperlaneSequenceAwareIndexerStore<MerkleTreeInsertion>, SequencedDataContractSync<MerkleTreeInsertion>);
+    build_indexer_fns!(build_vizing_launch_message_indexer, build_vizing_launch_message_indexers -> dyn HyperlaneSequenceAwareIndexerStore<VizingMessage>, SequencedDataContractSync<VizingMessage>);
 }

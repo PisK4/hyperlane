@@ -2,6 +2,8 @@ use ethers::prelude::Selector;
 use h_cosmos::CosmosProvider;
 use std::collections::HashMap;
 
+use h_eth::VizingMessageStationAbi;
+
 use eyre::{eyre, Context, Result};
 
 use ethers_prometheus::middleware::{ChainInfo, ContractInfo, PrometheusMiddlewareConf};
@@ -10,7 +12,7 @@ use hyperlane_core::{
     HyperlaneDomainProtocol, HyperlaneMessage, HyperlaneProvider, IndexMode,
     InterchainGasPaymaster, InterchainGasPayment, InterchainSecurityModule, Mailbox,
     MerkleTreeHook, MerkleTreeInsertion, MultisigIsm, RoutingIsm, SequenceAwareIndexer,
-    ValidatorAnnounce, H256,
+    ValidatorAnnounce, VizingMessage, H256,
 };
 use hyperlane_cosmos as h_cosmos;
 use hyperlane_ethereum::{
@@ -86,6 +88,8 @@ pub struct CoreContractAddresses {
     pub validator_announce: H256,
     /// Address of the MerkleTreeHook contract
     pub merkle_tree_hook: H256,
+    /// Address of the VizingMessageStation contract
+    pub vizing_message_station: H256,
 }
 
 /// Indexing settings
@@ -234,6 +238,32 @@ impl ChainConf {
                 )?);
                 Ok(indexer as Box<dyn SequenceAwareIndexer<HyperlaneMessage>>)
             }
+        }
+        .context(ctx)
+    }
+
+    pub async fn build_vizing_launch_message_indexer(
+        &self,
+        metrics: &CoreMetrics,
+    ) -> Result<Box<dyn SequenceAwareIndexer<VizingMessage>>> {
+        let ctx = "Building vizing message station indexer";
+        let locator = self.locator(self.addresses.vizing_message_station);
+
+        match &self.connection {
+            ChainConnectionConf::Ethereum(conf) => {
+                self.build_ethereum(
+                    conf,
+                    &locator,
+                    metrics,
+                    h_eth::VizingMessageStationBuilder {
+                        reorg_period: self.reorg_period,
+                    },
+                )
+                .await
+            }
+            ChainConnectionConf::Fuel(_) => todo!(),
+            ChainConnectionConf::Sealevel(conf) => todo!(),
+            ChainConnectionConf::Cosmos(conf) => todo!(),
         }
         .context(ctx)
     }
@@ -698,6 +728,11 @@ impl ChainConf {
             "merkle_tree_hook",
             self.addresses.merkle_tree_hook,
             EthereumInterchainGasPaymasterAbi::fn_map_owned(),
+        );
+        register_contract(
+            "vizing_message_station",
+            self.addresses.vizing_message_station,
+            VizingMessageStationAbi::fn_map_owned(),
         );
 
         cfg

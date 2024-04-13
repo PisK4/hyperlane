@@ -354,13 +354,7 @@
       "protocol": "ethereum",
       "rpcUrls": [
         {
-          "http": "https://ethereum-sepolia.publicnode.com"
-        },
-        {
-          "http": "https://ethereum-sepolia.blockpi.network/v1/rpc/public"
-        },
-        {
-          "http": "https://rpc.sepolia.org"
+          "http": "https://sepolia.infura.io/v3/9aa3d95b3bc440fa88ea12eaa4456161"
         }
       ],
       "staticMerkleRootMultisigIsmFactory": "0x0a71AcC99967829eE305a285750017C4916Ca269",
@@ -381,6 +375,7 @@
       "domainRoutingIsmFactory": "0x3F100cBBE5FD5466BdB4B3a15Ac226957e7965Ad",
       "interchainSecurityModule": "0x958124472b14B7940Ed5317C44a2508791dB1d48",
       "pausableHook": "0xa68022e53Fd28119D07C8336a8eC84A298Fd38Fd",
+      "vizingMessageStation": "0x111022e53Fd28119D07C8336a8eC84A298Fd38Fd",
       "index": {
         "from": 4517401
       }

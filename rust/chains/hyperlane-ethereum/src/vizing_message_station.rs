@@ -51,7 +51,7 @@ impl BuildableWithProvider for VizingMessageStationBuilder {
         provider: M,
         locator: &ContractLocator,
     ) -> Self::Output {
-        Box::new(VizingMessageStationIndexer::new(
+        Box::new(VizingLaunchMessageIndexer::new(
             Arc::new(provider),
             locator,
             self.reorg_period,
@@ -60,7 +60,7 @@ impl BuildableWithProvider for VizingMessageStationBuilder {
 }
 
 #[derive(Debug, Clone)]
-pub struct VizingMessageStationIndexer<M>
+pub struct VizingLaunchMessageIndexer<M>
 where
     M: Middleware,
 {
@@ -69,7 +69,7 @@ where
     reorg_period: u32,
 }
 
-impl<M> VizingMessageStationIndexer<M>
+impl<M> VizingLaunchMessageIndexer<M>
 where
     M: Middleware + 'static,
 {
@@ -98,7 +98,7 @@ where
 }
 
 #[async_trait]
-impl<M> Indexer<VizingMessage> for VizingMessageStationIndexer<M>
+impl<M> Indexer<VizingMessage> for VizingLaunchMessageIndexer<M>
 where
     M: Middleware + 'static,
 {
@@ -141,7 +141,7 @@ where
 }
 
 #[async_trait]
-impl<M> SequenceAwareIndexer<VizingMessage> for VizingMessageStationIndexer<M>
+impl<M> SequenceAwareIndexer<VizingMessage> for VizingLaunchMessageIndexer<M>
 where
     M: Middleware + 'static,
 {

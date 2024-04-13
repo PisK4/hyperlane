@@ -7,7 +7,7 @@ use hyperlane_core::{
     GasPaymentKey, HyperlaneDomain, HyperlaneLogStore, HyperlaneMessage,
     HyperlaneSequenceAwareIndexerStoreReader, HyperlaneWatermarkedLogStore,
     InterchainGasExpenditure, InterchainGasPayment, InterchainGasPaymentMeta, LogMeta,
-    MerkleTreeInsertion, H256,
+    MerkleTreeInsertion, VizingMessage, H256,
 };
 
 use super::{
@@ -17,6 +17,10 @@ use super::{
 
 // these keys MUST not be given multiple uses in case multiple agents are
 // started with the same database and domain.
+
+const VIZING_MESSAGE_ID: &str = "vizing_message_id_";
+const VIZING_MESSAGE_DISPATCHED_BLOCK_NUMBER: &str = "vizing_message_dispatched_block_number_";
+const VIZING_MESSAGE: &str = "vizing_message_";
 
 const MESSAGE_ID: &str = "message_id_";
 const MESSAGE_DISPATCHED_BLOCK_NUMBER: &str = "message_dispatched_block_number_";
@@ -104,6 +108,39 @@ impl HyperlaneRocksDB {
         match id {
             None => Ok(None),
             Some(id) => self.retrieve_message_by_id(&id),
+        }
+    }
+
+    pub fn storage_vizing_message(
+        &self,
+        message: &VizingMessage,
+        dispatched_block_number: u64,
+    ) -> DbResult<bool> {
+        if let Ok(Some(_)) = self.retrieve_vizing_message_id_by_nonce(&message.nonce) {
+            trace!(msg=?message, "Vizing message already stored in db");
+            return Ok(false);
+        }
+
+        let id = message.id();
+        debug!(msg=?message,  "Storing new vizing message in db",);
+
+        // - `id` --> `message`
+        self.store_vizing_message_by_id(&id, message)?;
+        // - `nonce` --> `id`
+        self.store_vizing_message_id_by_nonce(&message.nonce, &id)?;
+        // - `nonce` --> `dispatched block number`
+        self.store_vizing_message_dispatched_block_number_by_nonce(
+            &message.nonce,
+            &dispatched_block_number,
+        )?;
+        Ok(true)
+    }
+
+    pub fn retrieve_vizing_message_by_nonce(&self, nonce: u32) -> DbResult<Option<VizingMessage>> {
+        let id = self.retrieve_vizing_message_id_by_nonce(&nonce)?;
+        match id {
+            None => Ok(None),
+            Some(id) => self.retrieve_vizing_message_by_id(&id),
         }
     }
 
@@ -249,6 +286,25 @@ impl HyperlaneLogStore<HyperlaneMessage> for HyperlaneRocksDB {
 }
 
 #[async_trait]
+impl HyperlaneLogStore<VizingMessage> for HyperlaneRocksDB {
+    /// Store a list of dispatched messages and their associated metadata.
+    #[instrument(skip_all)]
+    async fn store_logs(&self, messages: &[(VizingMessage, LogMeta)]) -> Result<u32> {
+        let mut stored = 0;
+        for (message, meta) in messages {
+            let stored_message = self.storage_vizing_message(message, meta.block_number)?;
+            if stored_message {
+                stored += 1;
+            }
+        }
+        if stored > 0 {
+            debug!(messages = stored, "Wrote new vizing messages to database");
+        }
+        Ok(stored)
+    }
+}
+
+#[async_trait]
 impl HyperlaneLogStore<InterchainGasPayment> for HyperlaneRocksDB {
     /// Store a list of interchain gas payments and their associated metadata.
     #[instrument(skip_all)]
@@ -292,6 +348,21 @@ impl HyperlaneSequenceAwareIndexerStoreReader<HyperlaneMessage> for HyperlaneRoc
     /// Gets the block number at which the log occurred.
     async fn retrieve_log_block_number_by_sequence(&self, sequence: u32) -> Result<Option<u64>> {
         let number = self.retrieve_dispatched_block_number_by_nonce(&sequence)?;
+        Ok(number)
+    }
+}
+
+#[async_trait]
+impl HyperlaneSequenceAwareIndexerStoreReader<VizingMessage> for HyperlaneRocksDB {
+    /// Gets data by its sequence.
+    async fn retrieve_by_sequence(&self, sequence: u32) -> Result<Option<VizingMessage>> {
+        let message = self.retrieve_vizing_message_by_nonce(sequence)?;
+        Ok(message)
+    }
+
+    /// Gets the block number at which the log occurred.
+    async fn retrieve_log_block_number_by_sequence(&self, sequence: u32) -> Result<Option<u64>> {
+        let number = self.retrieve_vizing_message_dispatched_block_number_by_nonce(&sequence)?;
         Ok(number)
     }
 }
@@ -355,6 +426,22 @@ macro_rules! make_store_and_retrieve {
         }
     };
 }
+
+make_store_and_retrieve!(
+    pub,
+    vizing_message_id_by_nonce,
+    VIZING_MESSAGE_ID,
+    u32,
+    H256
+);
+make_store_and_retrieve!(
+    pub,
+    vizing_message_dispatched_block_number_by_nonce,
+    VIZING_MESSAGE_DISPATCHED_BLOCK_NUMBER,
+    u32,
+    u64
+);
+make_store_and_retrieve!(pub(self), vizing_message_by_id, VIZING_MESSAGE, H256, VizingMessage);
 
 make_store_and_retrieve!(pub, message_id_by_nonce, MESSAGE_ID, u32, H256);
 make_store_and_retrieve!(pub(self), message_by_id, MESSAGE, H256, HyperlaneMessage);
