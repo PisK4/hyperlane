@@ -10,8 +10,6 @@ pub type RawVizingMessage = Vec<u8>;
 pub struct VizingMessage {
     /// 4   user nonce
     pub nonce: u32,
-    /// 4   Origin domain ID
-    pub origin: u32,
     /// 4   Destination domain ID
     pub destination: u32,
     /// 8  Earliest arrival timestamp
@@ -27,14 +25,13 @@ pub struct VizingMessage {
     /// 0+  Additional parameters
     pub aditionparams: Vec<u8>,
     /// 0+  Message contents
-    pub body: Vec<u8>,
+    pub message: Vec<u8>,
 }
 
 impl Default for VizingMessage {
     fn default() -> Self {
         Self {
             nonce: 0,
-            origin: 0,
             destination: 0,
             earlistarrivaltimestamp: 0,
             latestarrivaltimestamp: 0,
@@ -42,7 +39,33 @@ impl Default for VizingMessage {
             sender: H160::zero(),
             value: U256::zero(),
             aditionparams: vec![],
-            body: vec![],
+            message: vec![],
+        }
+    }
+}
+
+impl VizingMessage {
+    pub fn build(
+        nonce: u32,
+        destination: u32,
+        earlistarrivaltimestamp: u64,
+        latestarrivaltimestamp: u64,
+        relayer: H160,
+        sender: H160,
+        value: U256,
+        aditionparams: Vec<u8>,
+        message: Vec<u8>,
+    ) -> Self {
+        Self {
+            nonce,
+            destination,
+            earlistarrivaltimestamp,
+            latestarrivaltimestamp,
+            relayer,
+            sender,
+            value,
+            aditionparams,
+            message,
         }
     }
 }
@@ -57,9 +80,8 @@ impl Debug for VizingMessage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "VizingMessage {{ nonce: {}, origin: {}, destination: {}, earlistarrivaltimestamp: {}, latestarrivaltimestamp: {}, relayer: {}, sender: {}, value: {}, aditionparams: 0x{}, body: 0x{} }}",
+            "VizingMessage {{ nonce: {}, destination: {}, earlistarrivaltimestamp: {}, latestarrivaltimestamp: {}, relayer: {}, sender: {}, value: {}, aditionparams: 0x{}, message: 0x{} }}",
             self.nonce,
-            fmt_domain(self.origin),
             fmt_domain(self.destination),
             self.earlistarrivaltimestamp,
             self.latestarrivaltimestamp,
@@ -67,7 +89,7 @@ impl Debug for VizingMessage {
             self.sender,
             self.value,
             hex::encode(&self.aditionparams),
-            hex::encode(&self.body)
+            hex::encode(&self.message)
         )
     }
 }
@@ -86,7 +108,6 @@ impl Encode for VizingMessage {
         let mut value_bytes = [0u8; 32];
         self.value.to_big_endian(&mut value_bytes);
         writer.write_all(&self.nonce.to_be_bytes())?;
-        writer.write_all(&self.origin.to_be_bytes())?;
         writer.write_all(&self.destination.to_be_bytes())?;
         writer.write_all(&self.earlistarrivaltimestamp.to_be_bytes())?;
         writer.write_all(&self.latestarrivaltimestamp.to_be_bytes())?;
@@ -94,8 +115,8 @@ impl Encode for VizingMessage {
         writer.write_all(self.sender.as_fixed_bytes())?;
         writer.write_all(value_bytes.as_ref())?;
         writer.write_all(&self.aditionparams)?;
-        writer.write_all(&self.body)?;
-        Ok(4 + 4 + 4 + 8 + 8 + 20 + 20 + 32 + self.aditionparams.len() + self.body.len())
+        writer.write_all(&self.message)?;
+        Ok(4 + 4 + 8 + 8 + 20 + 20 + 32 + self.aditionparams.len() + self.message.len())
     }
 }
 
@@ -106,9 +127,6 @@ impl Decode for VizingMessage {
     {
         let mut nonce = [0u8; 4];
         reader.read_exact(&mut nonce)?;
-
-        let mut origin = [0u8; 4];
-        reader.read_exact(&mut origin)?;
 
         let mut destination = [0u8; 4];
         reader.read_exact(&mut destination)?;
@@ -132,12 +150,11 @@ impl Decode for VizingMessage {
         let mut aditionparams = vec![];
         reader.read_to_end(&mut aditionparams)?;
 
-        let mut body = vec![];
-        reader.read_to_end(&mut body)?;
+        let mut message = vec![];
+        reader.read_to_end(&mut message)?;
 
         Ok(Self {
             nonce: u32::from_be_bytes(nonce),
-            origin: u32::from_be_bytes(origin),
             destination: u32::from_be_bytes(destination),
             earlistarrivaltimestamp: u64::from_be_bytes(earlistarrivaltimestamp),
             latestarrivaltimestamp: u64::from_be_bytes(latestarrivaltimestamp),
@@ -145,7 +162,7 @@ impl Decode for VizingMessage {
             sender,
             value,
             aditionparams,
-            body,
+            message,
         })
     }
 }
@@ -161,7 +178,7 @@ impl Decode for VizingMessage {
 //         hasher.input(self.relayer.as_ref());
 //         hasher.input(self.sender.as_ref());
 //         hasher.input(&self.aditionparams);
-//         hasher.input(&self.body);
+//         hasher.input(&self.message);
 //         U256::from_big_endian(hasher.result().as_slice())
 //     }
 // }

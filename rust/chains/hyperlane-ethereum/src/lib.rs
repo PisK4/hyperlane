@@ -14,6 +14,7 @@ pub use self::{
     interchain_gas::*, interchain_security_module::*, interchain_security_module::*, mailbox::*,
     mailbox::*, merkle_tree_hook::*, multisig_ism::*, provider::*, routing_ism::*, rpc_clients::*,
     signers::*, singleton_signer::*, trait_builder::*, validator_announce::*,
+    vizing_message_station::*,
 };
 
 #[cfg(not(doctest))]
@@ -73,6 +74,9 @@ mod signers;
 
 #[cfg(not(doctest))]
 mod singleton_signer;
+
+#[cfg(not(doctest))]
+mod vizing_message_station;
 
 mod config;
 mod error;
