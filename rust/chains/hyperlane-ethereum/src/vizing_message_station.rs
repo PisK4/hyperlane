@@ -112,7 +112,7 @@ where
         &self,
         range: RangeInclusive<u32>,
     ) -> ChainResult<Vec<(VizingMessage, LogMeta)>> {
-        Ok(self
+        let mut events = self
             .contract
             .successful_launch_message_filter()
             .from_block(*range.start())
@@ -136,7 +136,9 @@ where
                     meta.into(),
                 )
             })
-            .collect())
+            .collect();
+        print!("vizing launch: {:?}", events);
+        Ok(events)
     }
 }
 

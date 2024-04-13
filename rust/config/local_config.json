@@ -48,9 +48,9 @@
       "domainRoutingIsmFactory": "0x3F100cBBE5FD5466BdB4B3a15Ac226957e7965Ad",
       "interchainSecurityModule": "0x958124472b14B7940Ed5317C44a2508791dB1d48",
       "pausableHook": "0xa68022e53Fd28119D07C8336a8eC84A298Fd38Fd",
-      "vizingMessageStation": "0x7AC971e8B82e3ac4d3BfC776b29A7E6fc8B512Df",
+      "vizingMessageStation": "0x9AD5752b84dD03C752319640F01112Ea89419dee",
       "index": {
-        "from": 0
+        "from": 1
       }
     }
   },
