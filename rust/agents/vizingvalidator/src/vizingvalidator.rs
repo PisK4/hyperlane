@@ -102,7 +102,7 @@ impl Debug for Relayer {
 #[async_trait]
 #[allow(clippy::unit_arg)]
 impl BaseAgent for Relayer {
-    const AGENT_NAME: &'static str = "relayer";
+    const AGENT_NAME: &'static str = "vizing validator";
 
     type Settings = RelayerSettings;
 
@@ -300,7 +300,9 @@ impl BaseAgent for Relayer {
             .settings
             .server(self.core_metrics.clone())
             .expect("Failed to create server");
-        let server_task = server.run(vec![]).instrument(info_span!("Relayer server"));
+        let server_task = server
+            .run(vec![])
+            .instrument(info_span!("Vizing validator server"));
         tasks.push(server_task);
 
         // send channels by destination chain
@@ -340,7 +342,7 @@ impl BaseAgent for Relayer {
         if let Err(err) = try_join_all(tasks).await {
             tracing::error!(
                 error=?err,
-                "Relayer task panicked"
+                "Vizing Validator task panicked"
             );
         }
     }

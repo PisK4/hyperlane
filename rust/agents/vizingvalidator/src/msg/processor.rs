@@ -108,22 +108,25 @@ impl ProcessorExt for MessageProcessor {
             */
 
             let app_context = "".to_string();
-            let vizing_domain = HyperlaneDomain::build_vizing_domain();
-            let vizing_destination = vizing_domain.id();
+            let vizing_domain = HyperlaneDomain::build_vizing_domain().id();
 
             // Finally, build the submit arg and dispatch it to the submitter.
             let pending_msg = PendingMessage::from_persisted_retries(
                 msg,
-                self.destination_ctxs[&vizing_destination].clone(),
+                self.destination_ctxs[&vizing_domain].clone(),
                 Some(app_context),
             );
-            println!("sending message");
-            self.send_channels[&vizing_destination].send(Box::new(pending_msg.into()))?;
-            println!("message sent");
+            self.send_channels[&vizing_domain].send(Box::new(pending_msg.into()))?;
             self.message_nonce += 1;
         } else {
-            tokio::time::sleep(Duration::from_secs(1)).await;
+            // println!(
+            //     "no message found, sleeping, current nonce: {}",
+            //     self.message_nonce
+            // );
+            // tokio::time::sleep(Duration::from_secs(1)).await;
+            // println!("sleep done, current nonce: {}", self.message_nonce);
         }
+        // println!("tick done, current nonce: {}", self.message_nonce);
         Ok(())
     }
 }
@@ -158,7 +161,6 @@ impl MessageProcessor {
                     self.message_nonce += 1;
                 }
             } else {
-                println!("no message found, nonce: {}", self.message_nonce);
                 trace!(nonce=?self.message_nonce, "No message found in DB for nonce");
                 return Ok(None);
             }

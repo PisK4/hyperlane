@@ -237,7 +237,8 @@ impl PendingOperation for PendingMessage {
 
     #[instrument]
     async fn submit(&mut self) -> PendingOperationResult {
-        PendingOperationResult::Reprepare
+        println!("submit!, drop nonce{}", self.message.nonce);
+        PendingOperationResult::Drop
         /*vizing todo
         make_op_try!(|| self.on_reprepare());
 
