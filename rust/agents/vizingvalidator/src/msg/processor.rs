@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use derive_new::new;
 use eyre::Result;
 use hyperlane_base::{db::HyperlaneRocksDB, CoreMetrics};
-use hyperlane_core::{HyperlaneDomain, HyperlaneMessage};
+use hyperlane_core::{HyperlaneDomain, VizingMessage};
 use prometheus::IntGauge;
 use tokio::sync::mpsc::UnboundedSender;
 use tracing::{debug, trace};
@@ -32,8 +32,9 @@ pub struct MessageProcessor {
     send_channels: HashMap<u32, UnboundedSender<Box<DynPendingOperation>>>,
     /// Needed context to send a message for each destination chain
     destination_ctxs: HashMap<u32, Arc<MessageContext>>,
+
     metric_app_contexts: Vec<(MatchingList, String)>,
-    #[new(default)]
+    #[new(value = "0")]
     message_nonce: u32,
 }
 
@@ -63,9 +64,11 @@ impl ProcessorExt for MessageProcessor {
         // nonce.
         // Scan until we find next nonce without delivery confirmation.
         if let Some(msg) = self.try_get_unprocessed_message()? {
+            println!("got message: {:?}", msg);
             debug!(?msg, "Processor working on message");
-            let destination = msg.destination;
+            let destination = msg.destination as u32;
 
+            /* vizing todo
             // Skip if not whitelisted.
             if !self.whitelist.msg_matches(&msg, true) {
                 debug!(?msg, whitelist=?self.whitelist, "Message not whitelisted, skipping");
@@ -79,6 +82,7 @@ impl ProcessorExt for MessageProcessor {
                 self.message_nonce += 1;
                 return Ok(());
             }
+
 
             // Skip if the message is intended for this origin
             if destination == self.domain().id() {
@@ -94,19 +98,28 @@ impl ProcessorExt for MessageProcessor {
                 return Ok(());
             }
 
+
             debug!(%msg, "Sending message to submitter");
 
             let app_context_classifier =
                 AppContextClassifier::new(self.metric_app_contexts.clone());
 
             let app_context = app_context_classifier.get_app_context(&msg).await?;
+            */
+
+            let app_context = "".to_string();
+            let vizing_domain = HyperlaneDomain::build_vizing_domain();
+            let vizing_destination = vizing_domain.id();
+
             // Finally, build the submit arg and dispatch it to the submitter.
             let pending_msg = PendingMessage::from_persisted_retries(
                 msg,
-                self.destination_ctxs[&destination].clone(),
-                app_context,
+                self.destination_ctxs[&vizing_destination].clone(),
+                Some(app_context),
             );
-            self.send_channels[&destination].send(Box::new(pending_msg.into()))?;
+            println!("sending message");
+            self.send_channels[&vizing_destination].send(Box::new(pending_msg.into()))?;
+            println!("message sent");
             self.message_nonce += 1;
         } else {
             tokio::time::sleep(Duration::from_secs(1)).await;
@@ -116,30 +129,36 @@ impl ProcessorExt for MessageProcessor {
 }
 
 impl MessageProcessor {
-    fn try_get_unprocessed_message(&mut self) -> Result<Option<HyperlaneMessage>> {
+    fn try_get_unprocessed_message(&mut self) -> Result<Option<VizingMessage>> {
         loop {
             // First, see if we can find the message so we can update the gauge.
-            if let Some(message) = self.db.retrieve_message_by_nonce(self.message_nonce)? {
+            if let Some(message) = self
+                .db
+                .retrieve_vizing_message_by_nonce(self.message_nonce)?
+            {
+                println!("message found, nonce: {}", self.message_nonce);
                 // Update the latest nonce gauges
                 self.metrics
                     .max_last_known_message_nonce_gauge
                     .set(message.nonce as i64);
-                if let Some(metrics) = self.metrics.get(message.destination) {
+                if let Some(metrics) = self.metrics.get(message.destination as u32) {
                     metrics.set(message.nonce as i64);
                 }
 
                 // If this message has already been processed, on to the next one.
                 if !self
                     .db
-                    .retrieve_processed_by_nonce(&self.message_nonce)?
+                    .retrieve_vizing_processed_by_nonce(&self.message_nonce)?
                     .unwrap_or(false)
                 {
+                    println!("message not processed, nonce: {}", self.message_nonce);
                     return Ok(Some(message));
                 } else {
                     debug!(nonce=?self.message_nonce, "Message already marked as processed in DB");
                     self.message_nonce += 1;
                 }
             } else {
+                println!("no message found, nonce: {}", self.message_nonce);
                 trace!(nonce=?self.message_nonce, "No message found in DB for nonce");
                 return Ok(None);
             }
@@ -309,23 +328,45 @@ mod test {
         )
     }
 
-    fn dummy_hyperlane_message(destination: &HyperlaneDomain, nonce: u32) -> HyperlaneMessage {
-        HyperlaneMessage {
-            version: Default::default(),
+    // fn dummy_hyperlane_message(destination: &HyperlaneDomain, nonce: u32) -> HyperlaneMessage {
+    //     HyperlaneMessage {
+    //         version: Default::default(),
+    //         nonce,
+    //         // Origin must be different from the destination
+    //         origin: destination.id() + 1,
+    //         sender: Default::default(),
+    //         destination: destination.id(),
+    //         recipient: Default::default(),
+    //         body: Default::default(),
+    //     }
+    // }
+
+    fn dummy_hyperlane_message(destination: &HyperlaneDomain, nonce: u32) -> VizingMessage {
+        VizingMessage {
             nonce,
-            // Origin must be different from the destination
-            origin: destination.id() + 1,
+            destination: destination.id() as u64,
+            earlistarrivaltimestamp: 0,
+            latestarrivaltimestamp: 0,
+            relayer: Default::default(),
             sender: Default::default(),
-            destination: destination.id(),
-            recipient: Default::default(),
-            body: Default::default(),
+            value: Default::default(),
+            aditionparams: Default::default(),
+            message: Default::default(),
         }
     }
 
-    fn add_db_entry(db: &HyperlaneRocksDB, msg: &HyperlaneMessage, retry_count: u32) {
-        db.store_message(msg, Default::default()).unwrap();
+    // fn add_db_entry(db: &HyperlaneRocksDB, msg: &HyperlaneMessage, retry_count: u32) {
+    //     db.store_message(msg, Default::default()).unwrap();
+    //     if retry_count > 0 {
+    //         db.store_pending_message_retry_count_by_message_id(&msg.id(), &retry_count)
+    //             .unwrap();
+    //     }
+    // }
+
+    fn add_db_entry(db: &HyperlaneRocksDB, msg: &VizingMessage, retry_count: u32) {
+        db.store_vizing_message(msg).unwrap();
         if retry_count > 0 {
-            db.store_pending_message_retry_count_by_message_id(&msg.id(), &retry_count)
+            db.storage_vizing_pending_message_retry_count_by_message_id(&msg.nonce, &retry_count)
                 .unwrap();
         }
     }

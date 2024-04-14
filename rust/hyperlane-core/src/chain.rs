@@ -50,6 +50,11 @@ impl<'a> std::fmt::Display for ContractLocator<'a> {
 )]
 pub enum KnownHyperlaneDomain {
     Ethereum = 1,
+
+    Vizing = 28518,
+    VizingTestnet = 28516,
+    VizingLocal = 28517,
+
     Sepolia = 11155111,
 
     Polygon = 137,
@@ -132,6 +137,10 @@ impl HyperlaneDomain {
             domain_protocol: HyperlaneDomainProtocol::Ethereum,
             domain_technical_stack: HyperlaneDomainTechnicalStack::Other,
         }
+    }
+
+    pub fn build_vizing_domain() -> Self {
+        Self::Known(KnownHyperlaneDomain::VizingLocal)
     }
 }
 
@@ -217,13 +226,13 @@ impl KnownHyperlaneDomain {
         many_to_one!(match self {
             Mainnet: [
                 Ethereum, Avalanche, Arbitrum, Polygon, Optimism, BinanceSmartChain, Celo,
-                Moonbeam, Gnosis, MantaPacific, Neutron, Injective, InEvm
+                Moonbeam, Gnosis, MantaPacific, Neutron, Injective, InEvm, Vizing
             ],
             Testnet: [
                 Mumbai, Fuji, BinanceSmartChainTestnet,
-                Alfajores, MoonbaseAlpha, Sepolia, ScrollSepolia, Chiado, PlumeTestnet
+                Alfajores, MoonbaseAlpha, Sepolia, ScrollSepolia, Chiado, PlumeTestnet, VizingTestnet
             ],
-            LocalTestChain: [Test1, Test2, Test3, FuelTest1, SealevelTest1, SealevelTest2, CosmosTest99990, CosmosTest99991, Hardhat],
+            LocalTestChain: [Test1, Test2, Test3, FuelTest1, SealevelTest1, SealevelTest2, CosmosTest99990, CosmosTest99991, Hardhat, VizingLocal],
         })
     }
 
@@ -235,7 +244,7 @@ impl KnownHyperlaneDomain {
                 Ethereum, Sepolia, Polygon, Mumbai, Avalanche, Fuji, Arbitrum,
                 Optimism, BinanceSmartChain, BinanceSmartChainTestnet, Celo, Gnosis,
                 Alfajores, Moonbeam, InEvm, MoonbaseAlpha, ScrollSepolia,
-                Chiado, MantaPacific, PlumeTestnet, Test1, Test2, Test3, Hardhat
+                Chiado, MantaPacific, PlumeTestnet, Test1, Test2, Test3, Hardhat, Vizing, VizingTestnet, VizingLocal
             ],
             HyperlaneDomainProtocol::Fuel: [FuelTest1],
             HyperlaneDomainProtocol::Sealevel: [SealevelTest1, SealevelTest2],
@@ -252,7 +261,7 @@ impl KnownHyperlaneDomain {
                 Ethereum, Sepolia, Polygon, Mumbai, Avalanche, Fuji, Optimism,
                 BinanceSmartChain, BinanceSmartChainTestnet, Celo, Gnosis, Alfajores, Moonbeam, MoonbaseAlpha,
                 ScrollSepolia, Chiado, MantaPacific, Neutron, Injective, InEvm,
-                Test1, Test2, Test3, FuelTest1, SealevelTest1, SealevelTest2, CosmosTest99990, CosmosTest99991, Hardhat
+                Test1, Test2, Test3, FuelTest1, SealevelTest1, SealevelTest2, CosmosTest99990, CosmosTest99991, Hardhat, Vizing, VizingTestnet, VizingLocal
             ],
         })
     }

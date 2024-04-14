@@ -76,6 +76,19 @@ pub fn fmt_domain(domain: u32) -> String {
     }
 }
 
+pub fn fmt_domainu64(domain: u64) -> String {
+    #[cfg(feature = "strum")]
+    {
+        KnownHyperlaneDomain::try_from(domain as u32)
+            .map(|d| d.to_string())
+            .unwrap_or_else(|_| domain.to_string())
+    }
+    #[cfg(not(feature = "strum"))]
+    {
+        domain.to_string()
+    }
+}
+
 /// Formats the duration in the most appropriate time units.
 #[cfg(feature = "float")]
 pub fn fmt_duration(dur: Duration) -> String {

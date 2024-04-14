@@ -16,8 +16,8 @@ use hyperlane_base::{
     SequencedDataContractSync, WatermarkContractSync,
 };
 use hyperlane_core::{
-    HyperlaneDomain, HyperlaneMessage, InterchainGasPayment, MerkleTreeInsertion, VizingMessage,
-    U256,
+    HyperlaneDomain, HyperlaneMessage, InterchainGasPayment, KnownHyperlaneDomain,
+    MerkleTreeInsertion, VizingMessage, U256,
 };
 use tokio::{
     sync::{
@@ -219,7 +219,11 @@ impl BaseAgent for Relayer {
 
         let mut msg_ctxs = HashMap::new();
         let mut destination_chains = HashMap::new();
+        // // use VIZINGDOMAIN to build setting_destination_chains
+        // let vizing_domain = HyperlaneDomain::build_vizing_domain();
+        // let setting_destination_chains: HashSet<HyperlaneDomain> = HashSet::from([vizing_domain]);
         for destination in &settings.destination_chains {
+            // for destination in &setting_destination_chains {
             let destination_chain_setup = core.settings.chain_setup(destination).unwrap().clone();
             destination_chains.insert(destination.clone(), destination_chain_setup.clone());
             let transaction_gas_limit: Option<U256> =
@@ -329,7 +333,7 @@ impl BaseAgent for Relayer {
 
         // each message process attempts to send messages from a chain
         for origin in &self.origin_chains {
-            // tasks.push(self.run_message_processor(origin, send_channels.clone()));
+            tasks.push(self.run_message_processor(origin, send_channels.clone()));
             // tasks.push(self.run_merkle_tree_processor(origin));
         }
 
@@ -429,6 +433,8 @@ impl Relayer {
                 )
             })
             .collect();
+
+        println!("destination_ctxs: {:?}", destination_ctxs);
 
         let message_processor = MessageProcessor::new(
             self.dbs.get(origin).unwrap().clone(),

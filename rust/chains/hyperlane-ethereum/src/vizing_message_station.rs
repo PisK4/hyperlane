@@ -112,7 +112,7 @@ where
         &self,
         range: RangeInclusive<u32>,
     ) -> ChainResult<Vec<(VizingMessage, LogMeta)>> {
-        let mut events = self
+        let events = self
             .contract
             .successful_launch_message_filter()
             .from_block(*range.start())

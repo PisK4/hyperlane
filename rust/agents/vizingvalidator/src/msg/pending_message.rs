@@ -8,9 +8,13 @@ use async_trait::async_trait;
 use derive_new::new;
 use eyre::Result;
 use hyperlane_base::{db::HyperlaneRocksDB, CoreMetrics};
-use hyperlane_core::{HyperlaneChain, HyperlaneDomain, HyperlaneMessage, Mailbox, U256};
+use hyperlane_core::{
+    HyperlaneChain, HyperlaneDomain, HyperlaneMessage, Mailbox, VizingMessage, U256,
+};
 use prometheus::{IntCounter, IntGauge};
 use tracing::{debug, error, info, instrument, trace, warn};
+
+use crate::msg::metadata;
 
 use super::{
     gas_payment::GasPaymentEnforcer,
@@ -28,6 +32,7 @@ const CONFIRM_DELAY: Duration = if cfg!(any(test, feature = "test-utils")) {
 
 /// The message context contains the links needed to submit a message. Each
 /// instance is for a unique origin -> destination pairing.
+#[derive(Debug)]
 pub struct MessageContext {
     /// Mailbox on the destination chain.
     pub destination_mailbox: Arc<dyn Mailbox>,
@@ -48,7 +53,7 @@ pub struct MessageContext {
 /// A message that the submitter can and should try to submit.
 #[derive(new)]
 pub struct PendingMessage {
-    pub message: HyperlaneMessage,
+    pub message: VizingMessage,
     ctx: Arc<MessageContext>,
     app_context: Option<String>,
     #[new(default)]
@@ -91,9 +96,8 @@ impl Debug for PendingMessage {
 
 impl PartialEq for PendingMessage {
     fn eq(&self, other: &Self) -> bool {
-        self.num_retries == other.num_retries
-            && self.message.nonce == other.message.nonce
-            && self.message.origin == other.message.origin
+        self.num_retries == other.num_retries && self.message.nonce == other.message.nonce
+        // && self.message.origin == other.message.origin
     }
 }
 
@@ -138,6 +142,7 @@ impl PendingOperation for PendingMessage {
         let provider = self.ctx.destination_mailbox.provider();
 
         // We cannot deliver to an address that is not a contract so check and drop if it isn't.
+        /*vizing todo
         let is_contract = op_try!(
             provider.is_contract(&self.message.recipient).await,
             "checking if message recipient is a contract"
@@ -158,6 +163,7 @@ impl PendingOperation for PendingMessage {
             "fetching ISM address. Potentially malformed recipient ISM address."
         );
 
+
         let message_metadata_builder = op_try!(
             MessageMetadataBuilder::new(
                 ism_address,
@@ -177,6 +183,7 @@ impl PendingOperation for PendingMessage {
             info!("Could not fetch metadata");
             return self.on_reprepare();
         };
+
 
         // Estimate transaction costs for the process call. If there are issues, it's
         // likely that gas estimation has failed because the message is
@@ -216,6 +223,10 @@ impl PendingOperation for PendingMessage {
                 return self.on_reprepare();
             }
         }
+        */
+
+        let gas_limit = U256::from(200000);
+        let metadata = vec![];
 
         self.submission_data = Some(Box::new(SubmissionData {
             metadata,
@@ -226,6 +237,8 @@ impl PendingOperation for PendingMessage {
 
     #[instrument]
     async fn submit(&mut self) -> PendingOperationResult {
+        PendingOperationResult::Reprepare
+        /*vizing todo
         make_op_try!(|| self.on_reprepare());
 
         if self.submitted {
@@ -269,6 +282,7 @@ impl PendingOperation for PendingMessage {
             );
             self.on_reprepare()
         }
+        */
     }
 
     async fn confirm(&mut self) -> PendingOperationResult {
@@ -321,7 +335,7 @@ impl PendingMessage {
     /// Constructor that tries reading the retry count from the HyperlaneDB in order to recompute the `next_attempt_after`.
     /// In case of failure, behaves like `Self::new(...)`.
     pub fn from_persisted_retries(
-        message: HyperlaneMessage,
+        message: VizingMessage,
         ctx: Arc<MessageContext>,
         app_context: Option<String>,
     ) -> Self {
@@ -329,7 +343,7 @@ impl PendingMessage {
         match pm
             .ctx
             .origin_db
-            .retrieve_pending_message_retry_count_by_message_id(&pm.message.id())
+            .retrieve_vizing_pending_message_retry_count_by_message_id(&pm.message.id())
         {
             Ok(Some(num_retries)) => {
                 let next_attempt_after = PendingMessage::calculate_msg_backoff(num_retries)
@@ -447,7 +461,7 @@ impl MessageSubmissionMetrics {
         }
     }
 
-    fn update_nonce(&self, msg: &HyperlaneMessage) {
+    fn update_nonce(&self, msg: &VizingMessage) {
         // this is technically a race condition between `.get` and `.set` but worst case
         // the gauge should get corrected on the next update and is not an issue
         // with a ST runtime

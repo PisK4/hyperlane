@@ -97,6 +97,8 @@ impl Ord for DynPendingOperation {
             (Some(_), None) => Greater,
             (None, None) => match (self, other) {
                 (PendingMessage(a), PendingMessage(b)) => {
+                    a.message.nonce.cmp(&b.message.nonce)
+                    /*vizing todo
                     if a.message.origin == b.message.origin {
                         // Should execute in order of nonce for the same origin
                         a.message.nonce.cmp(&b.message.nonce)
@@ -104,6 +106,7 @@ impl Ord for DynPendingOperation {
                         // There is no priority between these messages, so arbitrarily use the id
                         a.message.id().cmp(&b.message.id())
                     }
+                    */
                 }
             },
         }

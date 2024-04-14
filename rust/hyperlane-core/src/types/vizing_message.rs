@@ -3,7 +3,7 @@ use serde::de::value;
 use sha3::{digest::Update, Digest, Keccak256};
 use std::fmt::{Debug, Display, Formatter};
 
-use crate::utils::fmt_domain;
+use crate::utils::fmt_domainu64;
 use crate::{Decode, Encode, HyperlaneProtocolError, Sequenced, H160, H256, U256};
 
 pub type RawVizingMessage = Vec<u8>;
@@ -22,8 +22,8 @@ pub struct VizingMessage {
     pub sender: H160,
     /// 32  Value from the sender
     pub value: U256,
-    /// 4   Destination domain ID
-    pub destination: u32,
+    /// 8   Destination domain ID
+    pub destination: u64,
     /// 0+  Additional parameters
     pub aditionparams: Vec<u8>,
     /// 0+  Message contents
@@ -49,7 +49,7 @@ impl Default for VizingMessage {
 impl VizingMessage {
     pub fn build(
         nonce: u32,
-        destination: u32,
+        destination: u64,
         earlistarrivaltimestamp: u64,
         latestarrivaltimestamp: u64,
         relayer: H160,
@@ -82,9 +82,10 @@ impl Debug for VizingMessage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         write!(
             f,
-            "VizingMessage {{ nonce: {}, destination: {}, earlistarrivaltimestamp: {}, latestarrivaltimestamp: {}, relayer: {}, sender: {}, value: {}, aditionparams: 0x{}, message: 0x{} }}",
+            "VizingMessage {{id:{}, nonce: {}, destination: {}, earlistarrivaltimestamp: {}, latestarrivaltimestamp: {}, relayer: {}, sender: {}, value: {}, aditionparams: 0x{}, message: 0x{} }}",
+            self.id(),
             self.nonce,
-            fmt_domain(self.destination),
+            fmt_domainu64(self.destination),
             self.earlistarrivaltimestamp,
             self.latestarrivaltimestamp,
             self.relayer,
@@ -118,7 +119,7 @@ impl Encode for VizingMessage {
         writer.write_all(&self.destination.to_be_bytes())?;
         writer.write_all(&self.aditionparams)?;
         writer.write_all(&self.message)?;
-        Ok(4 + 8 + 8 + 20 + 20 + 32 + 4 + self.aditionparams.len() + self.message.len())
+        Ok(4 + 8 + 8 + 20 + 20 + 32 + 8 + self.aditionparams.len() + self.message.len())
     }
 }
 
@@ -146,7 +147,7 @@ impl Decode for VizingMessage {
         reader.read_exact(&mut value_bytes)?;
         let value = U256::from_big_endian(&value_bytes);
 
-        let mut destination = [0u8; 4];
+        let mut destination = [0u8; 8];
         reader.read_exact(&mut destination)?;
 
         let mut aditionparams = vec![];
@@ -157,7 +158,7 @@ impl Decode for VizingMessage {
 
         Ok(Self {
             nonce: u32::from_be_bytes(nonce),
-            destination: u32::from_be_bytes(destination),
+            destination: u64::from_be_bytes(destination),
             earlistarrivaltimestamp: u64::from_be_bytes(earlistarrivaltimestamp),
             latestarrivaltimestamp: u64::from_be_bytes(latestarrivaltimestamp),
             relayer,

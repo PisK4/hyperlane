@@ -21,6 +21,9 @@ use super::{
 const VIZING_MESSAGE_ID: &str = "vizing_message_id_";
 const VIZING_MESSAGE_DISPATCHED_BLOCK_NUMBER: &str = "vizing_message_dispatched_block_number_";
 const VIZING_MESSAGE: &str = "vizing_message_";
+const VIZING_NONCE_PROCESSED: &str = "vizing_nonce_processed_";
+const VIZING_PENDING_MESSAGE_RETRY_COUNT_FOR_MESSAGE_ID: &str =
+    "vizing_pending_message_retry_count_for_message_id_";
 
 const MESSAGE_ID: &str = "message_id_";
 const MESSAGE_DISPATCHED_BLOCK_NUMBER: &str = "message_dispatched_block_number_";
@@ -441,7 +444,23 @@ make_store_and_retrieve!(
     u32,
     u64
 );
+
 make_store_and_retrieve!(pub(self), vizing_message_by_id, VIZING_MESSAGE, H256, VizingMessage);
+make_store_and_retrieve!(
+    pub,
+    vizing_processed_by_nonce,
+    VIZING_NONCE_PROCESSED,
+    u32,
+    bool
+);
+
+make_store_and_retrieve!(
+    pub,
+    vizing_pending_message_retry_count_by_message_id,
+    VIZING_PENDING_MESSAGE_RETRY_COUNT_FOR_MESSAGE_ID,
+    H256,
+    u32
+);
 
 make_store_and_retrieve!(pub, message_id_by_nonce, MESSAGE_ID, u32, H256);
 make_store_and_retrieve!(pub(self), message_by_id, MESSAGE, H256, HyperlaneMessage);
