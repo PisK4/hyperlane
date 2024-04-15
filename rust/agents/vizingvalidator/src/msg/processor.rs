@@ -64,9 +64,12 @@ impl ProcessorExt for MessageProcessor {
         // nonce.
         // Scan until we find next nonce without delivery confirmation.
         if let Some(msg) = self.try_get_unprocessed_message()? {
-            println!("got message: {:?}", msg);
+            // println!("got message: {:?}", msg);
             debug!(?msg, "Processor working on message");
             let destination = msg.destination as u32;
+
+            // vizing todo mark for now
+            // let vizing_domain = HyperlaneDomain::build_vizing_domain().id();
 
             /* vizing todo
             // Skip if not whitelisted.
@@ -108,15 +111,14 @@ impl ProcessorExt for MessageProcessor {
             */
 
             let app_context = "".to_string();
-            let vizing_domain = HyperlaneDomain::build_vizing_domain().id();
 
             // Finally, build the submit arg and dispatch it to the submitter.
             let pending_msg = PendingMessage::from_persisted_retries(
                 msg,
-                self.destination_ctxs[&vizing_domain].clone(),
+                self.destination_ctxs[&destination].clone(),
                 Some(app_context),
             );
-            self.send_channels[&vizing_domain].send(Box::new(pending_msg.into()))?;
+            self.send_channels[&destination].send(Box::new(pending_msg.into()))?;
             self.message_nonce += 1;
         } else {
             // println!(
@@ -139,7 +141,7 @@ impl MessageProcessor {
                 .db
                 .retrieve_vizing_message_by_nonce(self.message_nonce)?
             {
-                println!("message found, nonce: {}", self.message_nonce);
+                // println!("message found, nonce: {}", self.message_nonce);
                 // Update the latest nonce gauges
                 self.metrics
                     .max_last_known_message_nonce_gauge
@@ -154,7 +156,7 @@ impl MessageProcessor {
                     .retrieve_vizing_processed_by_nonce(&self.message_nonce)?
                     .unwrap_or(false)
                 {
-                    println!("message not processed, nonce: {}", self.message_nonce);
+                    // println!("message not processed, nonce: {}", self.message_nonce);
                     return Ok(Some(message));
                 } else {
                     debug!(nonce=?self.message_nonce, "Message already marked as processed in DB");

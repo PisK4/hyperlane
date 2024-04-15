@@ -27,7 +27,7 @@
       "protocol": "ethereum",
       "rpcUrls": [
         {
-          "http": "http://127.0.0.1:8545/"
+          "http": "http://127.0.0.1:8568/"
         }
       ],
       "staticMerkleRootMultisigIsmFactory": "0x0a71AcC99967829eE305a285750017C4916Ca269",

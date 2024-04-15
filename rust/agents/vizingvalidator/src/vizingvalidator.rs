@@ -335,7 +335,7 @@ impl BaseAgent for Relayer {
 
         // each message process attempts to send messages from a chain
         for origin in &self.origin_chains {
-            tasks.push(self.run_message_processor(origin, send_channels.clone()));
+            // tasks.push(self.run_message_processor(origin, send_channels.clone()));
             // tasks.push(self.run_merkle_tree_processor(origin));
         }
 
@@ -436,7 +436,7 @@ impl Relayer {
             })
             .collect();
 
-        println!("destination_ctxs: {:?}", destination_ctxs);
+        // println!("destination_ctxs: {:?}", destination_ctxs);
 
         let message_processor = MessageProcessor::new(
             self.dbs.get(origin).unwrap().clone(),

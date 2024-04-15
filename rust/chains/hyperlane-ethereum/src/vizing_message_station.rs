@@ -66,6 +66,7 @@ where
 {
     contract: Arc<VizingMessageStationInternal<M>>,
     provider: Arc<M>,
+    domain: HyperlaneDomain,
     reorg_period: u32,
 }
 
@@ -81,6 +82,7 @@ where
         Self {
             contract,
             provider,
+            domain: locator.domain.clone(),
             reorg_period,
         }
     }
@@ -123,14 +125,16 @@ where
             .map(|(event, meta)| {
                 (
                     VizingMessage::build(
-                        event.nonce.into(),
-                        event.params.dest_chainld.into(),
                         event.params.earlist_arrival_timestamp.into(),
                         event.params.latest_arrival_timestamp.into(),
                         event.params.relayer.into(),
+                        event.params.dest_chainld.into(),
+                        (&event.params.adition_params.as_ref()).to_vec(),
+                        self.domain.id().into(),
+                        event.nonce.into(),
+                        meta.transaction_hash.into(),
                         event.params.sender.into(),
                         event.params.value.into(),
-                        (&event.params.adition_params.as_ref()).to_vec(),
                         (&event.params.message.as_ref()).to_vec(),
                     ),
                     meta.into(),
