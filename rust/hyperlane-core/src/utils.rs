@@ -76,6 +76,7 @@ pub fn fmt_domain(domain: u32) -> String {
     }
 }
 
+/// Format a domain(u64 type) id as a name if it is known or just the number if not.
 pub fn fmt_domainu64(domain: u64) -> String {
     #[cfg(feature = "strum")]
     {

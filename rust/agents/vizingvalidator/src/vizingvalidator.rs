@@ -16,7 +16,7 @@ use hyperlane_base::{
     SequencedDataContractSync, WatermarkContractSync,
 };
 use hyperlane_core::{
-    HyperlaneDomain, HyperlaneMessage, InterchainGasPayment, KnownHyperlaneDomain,
+    HyperlaneDomain, HyperlaneMessage, InterchainGasPayment,
     MerkleTreeInsertion, VizingMessage, U256,
 };
 use tokio::{

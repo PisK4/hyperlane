@@ -114,6 +114,11 @@ impl HyperlaneRocksDB {
         }
     }
 
+    /// Storage vizing message
+    /// Keys --> Values:
+    /// - `nonce` --> `id`
+    /// - `id` --> `message`
+    /// - `nonce` --> `dispatched block number`
     pub fn storage_vizing_message(
         &self,
         message: &VizingMessage,
@@ -141,6 +146,7 @@ impl HyperlaneRocksDB {
         Ok(true)
     }
 
+    /// Retrieve a message by its nonce
     pub fn retrieve_vizing_message_by_nonce(&self, nonce: u32) -> DbResult<Option<VizingMessage>> {
         let id = self.retrieve_vizing_message_id_by_nonce(&nonce)?;
         println!("retrieve_nonce: {:?}, id: {:?}", nonce, id);

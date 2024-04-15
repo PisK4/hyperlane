@@ -242,6 +242,7 @@ impl ChainConf {
         .context(ctx)
     }
 
+    /// Try to convert the chain settings into a vizing message indexer
     pub async fn build_vizing_launch_message_indexer(
         &self,
         metrics: &CoreMetrics,
@@ -262,8 +263,8 @@ impl ChainConf {
                 .await
             }
             ChainConnectionConf::Fuel(_) => todo!(),
-            ChainConnectionConf::Sealevel(conf) => todo!(),
-            ChainConnectionConf::Cosmos(conf) => todo!(),
+            ChainConnectionConf::Sealevel(_) => todo!(),
+            ChainConnectionConf::Cosmos(_) => todo!(),
         }
         .context(ctx)
     }

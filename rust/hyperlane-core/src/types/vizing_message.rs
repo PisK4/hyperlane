@@ -1,13 +1,11 @@
 use ethers_core::utils::keccak256;
-use serde::de::value;
-use sha3::{digest::Update, Digest, Keccak256};
 use std::fmt::{Debug, Display, Formatter};
 
 use crate::utils::fmt_domainu64;
 use crate::{Decode, Encode, HyperlaneProtocolError, Sequenced, H160, H256, U256};
 
-pub type RawVizingMessage = Vec<u8>;
 
+/// Vizing Omni-Chain Message
 #[derive(Clone, Eq, PartialEq, Hash)]
 pub struct VizingMessage {
     /// 8  Earliest arrival timestamp
@@ -54,8 +52,8 @@ impl Default for VizingMessage {
         }
     }
 }
-
 impl VizingMessage {
+    /// build vizing message via Event Log
     pub fn build(
         earlistarrivaltimestamp: u64,
         latestarrivaltimestamp: u64,
@@ -208,8 +206,8 @@ impl Decode for VizingMessage {
 }
 
 impl VizingMessage {
+    /// Convert the message to a message id
     pub fn id(&self) -> H256 {
-        // ethers encode & keccak256
         let mut encoded = Vec::new();
         encoded.extend_from_slice(&self.origin.to_be_bytes());
         encoded.extend_from_slice(&self.nonce.to_be_bytes());
