@@ -9,7 +9,7 @@ use derive_new::new;
 use eyre::Result;
 use hyperlane_base::{db::HyperlaneRocksDB, CoreMetrics};
 use hyperlane_core::{
-    HyperlaneChain, HyperlaneDomain, HyperlaneMessage, Mailbox, VizingMessage, H160, H256, U256,
+    HyperlaneChain, HyperlaneDomain, HyperlaneMessage, Mailbox, VizingMessage, H160, H256, U256, VizingLandingDataParams,VizingLandingData
 };
 use prometheus::{IntCounter, IntGauge};
 use tracing::{debug, error, info, instrument, trace, warn};
@@ -59,7 +59,7 @@ pub struct PendingMessage {
     #[new(default)]
     submitted: bool,
     #[new(default)]
-    submission_data: Option<Box<LandingData>>,
+    submission_data: Option<Box<VizingLandingData>>,
     #[new(default)]
     num_retries: u32,
     #[new(value = "Instant::now()")]
@@ -74,17 +74,6 @@ struct SubmissionData {
     gas_limit: U256,
 }
 
-#[derive(Debug)]
-struct LandingData {
-    message_id: H256,
-    src_chain_id: u64,
-    src_chain_nonce: u32,
-    src_tx_hash: H256,
-    sender: H160,
-    value: U256,
-    message: Vec<u8>,
-    gas_limit: U256,
-}
 
 impl Debug for PendingMessage {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
@@ -237,9 +226,9 @@ impl PendingOperation for PendingMessage {
         }
         */
 
-        let gas_limit = U256::from(200000);
+        // let gas_limit = U256::from(200000);
 
-        self.submission_data = Some(Box::new(LandingData {
+        let params = vec![VizingLandingDataParams {
             message_id: self.message.id(),
             src_chain_id: self.message.origin,
             src_chain_nonce: self.message.nonce,
@@ -247,7 +236,13 @@ impl PendingOperation for PendingMessage {
             sender: self.message.sender,
             value: self.message.value,
             message: self.message.message.clone(),
-            gas_limit,
+        }];
+
+        self.submission_data = Some(Box::new(VizingLandingData {
+            mpt_root_new: H256::from_slice(&[0u8; 32]),
+            aggregated_earlist_arrival_timestamp: 0,
+            aggregated_latest_arrival_timestamp: 0,
+            params,
         }));
         PendingOperationResult::Success
     }

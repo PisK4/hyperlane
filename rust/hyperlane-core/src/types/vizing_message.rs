@@ -35,6 +35,8 @@ pub struct VizingMessage {
     /* message id encode end */
 }
 
+
+
 impl Default for VizingMessage {
     fn default() -> Self {
         Self {
@@ -222,3 +224,42 @@ impl VizingMessage {
         hash.into()
     }
 }
+
+
+// mpt_root_new: [u8; 32],
+// aggregated_earlist_arrival_timestamp: u64,
+// aggregated_latest_arrival_timestamp: u64,
+// params: ::std::vec::Vec<InteractionLanding>,
+
+/// Landing Data at destination chain
+#[derive(Debug)]
+pub struct VizingLandingData {
+    /// merkle root of the message tree
+    pub mpt_root_new: H256,
+    /// Earliest arrival timestamp
+    pub aggregated_earlist_arrival_timestamp: u64,
+    /// Latest arrival timestamp
+    pub aggregated_latest_arrival_timestamp: u64,
+    /// params
+    pub params: Vec<VizingLandingDataParams>,
+}
+
+/// Landing Data at destination chain
+#[derive(Debug)]
+pub struct VizingLandingDataParams{
+    /// Message id
+    pub message_id: H256,
+    /// Source chain id
+    pub src_chain_id: u64,
+    /// Source chain nonce
+    pub src_chain_nonce: u32,
+    /// Source chain tx hash
+    pub src_tx_hash: H256,
+    /// Sender
+    pub sender: H160,
+    /// value of native token
+    pub value: U256,
+    /// cross chain message
+    pub message: Vec<u8>,
+}
+
