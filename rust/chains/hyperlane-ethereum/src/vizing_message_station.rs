@@ -129,7 +129,7 @@ where
                         event.params.latest_arrival_timestamp.into(),
                         event.params.relayer.into(),
                         event.params.dest_chainld.into(),
-                        (&event.params.adition_params.as_ref()).to_vec(),
+                        // (&event.params.adition_params.as_ref()).to_vec(),
                         self.domain.id().into(),
                         event.nonce.into(),
                         meta.transaction_hash.into(),

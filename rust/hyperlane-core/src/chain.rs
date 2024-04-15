@@ -53,7 +53,7 @@ pub enum KnownHyperlaneDomain {
 
     Vizing = 28518,
     VizingTestnet = 28516,
-    VizingLocal = 28517,
+    VizingLocal = 31337,
 
     Sepolia = 11155111,
 

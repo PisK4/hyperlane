@@ -308,6 +308,7 @@ impl BaseAgent for Relayer {
         // send channels by destination chain
         let mut send_channels = HashMap::with_capacity(self.destination_chains.len());
         for (dest_domain, dest_conf) in &self.destination_chains {
+            println!("building destination chain task: {:?}", dest_domain.id());
             let (send_channel, receive_channel) =
                 mpsc::unbounded_channel::<Box<DynPendingOperation>>();
             send_channels.insert(dest_domain.id(), send_channel);
@@ -327,6 +328,7 @@ impl BaseAgent for Relayer {
         }
 
         for origin in &self.origin_chains {
+            println!("building source chain task: {:?}", origin.id());
             // tasks.push(self.run_message_sync(origin).await);
             tasks.push(self.run_vizing_message_sync(origin).await);
             // tasks.push(self.run_interchain_gas_payment_sync(origin).await);
@@ -335,7 +337,7 @@ impl BaseAgent for Relayer {
 
         // each message process attempts to send messages from a chain
         for origin in &self.origin_chains {
-            // tasks.push(self.run_message_processor(origin, send_channels.clone()));
+            tasks.push(self.run_message_processor(origin, send_channels.clone()));
             // tasks.push(self.run_merkle_tree_processor(origin));
         }
 

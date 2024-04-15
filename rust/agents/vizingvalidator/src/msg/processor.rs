@@ -64,7 +64,7 @@ impl ProcessorExt for MessageProcessor {
         // nonce.
         // Scan until we find next nonce without delivery confirmation.
         if let Some(msg) = self.try_get_unprocessed_message()? {
-            // println!("got message: {:?}", msg);
+            println!("got message: {:?}", msg);
             debug!(?msg, "Processor working on message");
             let destination = msg.destination as u32;
 
@@ -121,14 +121,14 @@ impl ProcessorExt for MessageProcessor {
             self.send_channels[&destination].send(Box::new(pending_msg.into()))?;
             self.message_nonce += 1;
         } else {
-            // println!(
-            //     "no message found, sleeping, current nonce: {}",
-            //     self.message_nonce
-            // );
-            // tokio::time::sleep(Duration::from_secs(1)).await;
+            println!(
+                "no message found, sleeping, current nonce: {}",
+                self.message_nonce
+            );
+            tokio::time::sleep(Duration::from_secs(1)).await;
             // println!("sleep done, current nonce: {}", self.message_nonce);
         }
-        // println!("tick done, current nonce: {}", self.message_nonce);
+        println!("tick done, current nonce: {}", self.message_nonce);
         Ok(())
     }
 }
@@ -141,7 +141,7 @@ impl MessageProcessor {
                 .db
                 .retrieve_vizing_message_by_nonce(self.message_nonce)?
             {
-                // println!("message found, nonce: {}", self.message_nonce);
+                println!("message found, nonce: {}", self.message_nonce);
                 // Update the latest nonce gauges
                 self.metrics
                     .max_last_known_message_nonce_gauge
@@ -156,13 +156,14 @@ impl MessageProcessor {
                     .retrieve_vizing_processed_by_nonce(&self.message_nonce)?
                     .unwrap_or(false)
                 {
-                    // println!("message not processed, nonce: {}", self.message_nonce);
+                    println!("message not processed, nonce: {}", self.message_nonce);
                     return Ok(Some(message));
                 } else {
                     debug!(nonce=?self.message_nonce, "Message already marked as processed in DB");
                     self.message_nonce += 1;
                 }
             } else {
+                println!("serch no message found, nonce: {}", self.message_nonce);
                 trace!(nonce=?self.message_nonce, "No message found in DB for nonce");
                 return Ok(None);
             }
@@ -347,15 +348,17 @@ mod test {
 
     fn dummy_hyperlane_message(destination: &HyperlaneDomain, nonce: u32) -> VizingMessage {
         VizingMessage {
-            nonce,
-            destination: destination.id() as u64,
             earlistarrivaltimestamp: 0,
             latestarrivaltimestamp: 0,
-            relayer: Default::default(),
-            sender: Default::default(),
-            value: Default::default(),
-            aditionparams: Default::default(),
-            message: Default::default(),
+            relayer: H160::zero(),
+            destination: destination.id(),
+            aditionparams: vec![],
+            origin: destination.id() + 1,
+            nonce,
+            srctxhash: H256::zero(),
+            sender: H160::zero(),
+            value: U256::zero(),
+            message: vec![],
         }
     }
 

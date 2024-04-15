@@ -14,9 +14,9 @@
         "estimateBlockTime": 13,
         "reorgPeriod": 2
       },
-      "chainId": 28517,
+      "chainId": 31337,
       "displayName": "VizingLocal",
-      "domainId": 28517,
+      "domainId": 31337,
       "isTestnet": true,
       "name": "vizinglocal",
       "nativeToken": {

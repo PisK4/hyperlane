@@ -129,8 +129,10 @@ impl HyperlaneRocksDB {
 
         // - `id` --> `message`
         self.store_vizing_message_by_id(&id, message)?;
+        println!("storage_message_by_id: {:?}", id);
         // - `nonce` --> `id`
         self.store_vizing_message_id_by_nonce(&message.nonce, &id)?;
+        println!("storage_id_by_nonce: {:?}", message.nonce);
         // - `nonce` --> `dispatched block number`
         self.store_vizing_message_dispatched_block_number_by_nonce(
             &message.nonce,
@@ -141,6 +143,7 @@ impl HyperlaneRocksDB {
 
     pub fn retrieve_vizing_message_by_nonce(&self, nonce: u32) -> DbResult<Option<VizingMessage>> {
         let id = self.retrieve_vizing_message_id_by_nonce(&nonce)?;
+        println!("retrieve_nonce: {:?}, id: {:?}", nonce, id);
         match id {
             None => Ok(None),
             Some(id) => self.retrieve_vizing_message_by_id(&id),
@@ -293,6 +296,7 @@ impl HyperlaneLogStore<VizingMessage> for HyperlaneRocksDB {
     /// Store a list of dispatched messages and their associated metadata.
     #[instrument(skip_all)]
     async fn store_logs(&self, messages: &[(VizingMessage, LogMeta)]) -> Result<u32> {
+        println!("enter store_logs vizing message");
         let mut stored = 0;
         for (message, meta) in messages {
             let stored_message = self.storage_vizing_message(message, meta.block_number)?;
@@ -303,6 +307,7 @@ impl HyperlaneLogStore<VizingMessage> for HyperlaneRocksDB {
         if stored > 0 {
             debug!(messages = stored, "Wrote new vizing messages to database");
         }
+        println!("exit store_logs vizing message: {:?}", stored);
         Ok(stored)
     }
 }
